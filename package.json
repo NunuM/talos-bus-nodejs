@@ -1,6 +1,6 @@
 {
   "name": "talos-bus",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Talos Bus interface",
   "main": "index.js",
   "scripts": {
@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/NunuM/talos-bus-nodejs.git"
+    "url": "git+https://github.com/NunuM/talos-bus-nodejs.git",
   },
   "keywords": [
     "amqplib",
