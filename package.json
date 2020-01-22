@@ -1,0 +1,28 @@
+{
+  "name": "talos-bus",
+  "version": "1.0.0",
+  "description": "Talos Bus interface",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NunuM/talos-bus-nodejs.git"
+  },
+  "keywords": [
+    "amqplib",
+    "talos",
+    "bus"
+  ],
+  "author": "Nuno Gonçalves",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/NunuM/talos-bus-nodejs/issues"
+  },
+  "homepage": "https://github.com/NunuM/talos-bus-nodejs#readme",
+  "dependencies": {
+    "amqplib": "^0.5.5",
+    "uuid": "^3.4.0"
+  }
+}
