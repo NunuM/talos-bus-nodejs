@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/NunuM/talos-bus-nodejs.git",
+    "url": "git+https://github.com/NunuM/talos-bus-nodejs.git"
   },
   "keywords": [
     "amqplib",
