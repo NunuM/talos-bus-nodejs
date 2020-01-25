@@ -26,11 +26,21 @@ const tbus = require('talos-bus');
 
 async function fn() {
   
+    const options = {
+        useConfirmChannel: false,
+        reconnectionBackoff: 500, // After losing connection reconnect after X ms
+        client: {
+            timeout: 6000 // socket timeout
+        },
+        qos: {
+            prefetch: 50
+        }
+    };
     /**
     * 
     * @type {Bus}
     */
-    const bus = new tbus.RabbitMQBus('amqp://guest:guest@localhost:5672', {timeout:60000}, console);
+    const bus = new tbus.RabbitMQBus('amqp://guest:guest@localhost:5672', options , console);
     
     try {
         await bus.connect();   
@@ -58,7 +68,7 @@ async function fn() {
 ```js
 const tbus = require('talos-bus');
 
-const bus = new tbus.RabbitMQBus('amqp://guest:guest@localhost:5672', {timeout:60000}, console);
+const bus = new tbus.RabbitMQBus('amqp://guest:guest@localhost:5672');
 
 // 3 - This will run after since is a promise
 // on connection the subscription will be restored and then, the message is publish
