@@ -1,6 +1,6 @@
 {
   "name": "talos-bus",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Talos Bus interface",
   "main": "index.js",
   "scripts": {
@@ -22,7 +22,7 @@
   },
   "homepage": "https://github.com/NunuM/talos-bus-nodejs#readme",
   "dependencies": {
-    "amqplib": "^0.5.5",
-    "uuid": "^3.4.0"
+    "amqplib": "^0.8.0",
+    "uuid": "^8.3.2"
   }
 }
