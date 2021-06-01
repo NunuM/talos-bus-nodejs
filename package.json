@@ -1,6 +1,6 @@
 {
   "name": "talos-bus",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "description": "Talos Bus interface",
   "main": "index.js",
   "scripts": {
