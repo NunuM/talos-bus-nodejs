@@ -30,7 +30,7 @@ export class RabbitMQ implements Bus {
     private _channel?: Channel
     private _state: ConnectionState = ConnectionState.NotConnected;
     private readonly _messagesBuffer: CircularBuffer<Message> = new CircularBuffer(100);
-    private readonly _subscriptions: SubscriptionImpl[] = [];
+    private readonly _subscriptions: Set<SubscriptionImpl> = new Set<SubscriptionImpl>();
     private _connectionLock: boolean = false;
     private _reconnectionAttempts: number = 0;
 
@@ -77,6 +77,7 @@ export class RabbitMQ implements Bus {
 
         if (!this.isConnected) {
             this.logger.debug('Connection is not available, postpone subscription');
+            this._subscriptions.add(subscription);
             return false;
         }
 
@@ -120,7 +121,6 @@ export class RabbitMQ implements Bus {
                         subscription.exchangeOptions);
                 } catch (e) {
                     this.logger.debug(`Exchange not exists: ${subscription.exchange}`, e);
-                    this._subscriptions.splice(this._subscriptions.indexOf(subscription), 1);
                     subscription.onSubscriptionError(e);
                     return false;
                 }
@@ -154,8 +154,7 @@ export class RabbitMQ implements Bus {
             }
         }
 
-        if (!this._subscriptions.includes(subscription))
-            this._subscriptions.push(subscription);
+        this._subscriptions.add(subscription);
 
         return true;
     }
@@ -169,10 +168,9 @@ export class RabbitMQ implements Bus {
         if (!(subscription instanceof SubscriptionImpl)) {
             throw new TypeError("Subscription must be created from the library subscription builders");
         }
-        
-        if (this._subscriptions.includes(subscription)) {
-            const idx = this._subscriptions.indexOf(subscription);
-            this._subscriptions.splice(idx, 1);
+
+        if (this._subscriptions.has(subscription)) {
+            this._subscriptions.delete(subscription);
         }
 
         if (this.isConnected) {
