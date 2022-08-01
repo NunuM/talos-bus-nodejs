@@ -1,33 +1,31 @@
-const { v4: uuid } = require('uuid');
+import {Options} from "amqplib/properties";
+import {Message as ClientMessage} from "amqplib";
 
-class RabbitMQMessage {
+const {v4: uuid} = require('uuid');
+
+export type OnReturnedMessageCallback = (message: ClientMessage) => boolean;
+
+export class Message {
+
+    private _onReturn?: OnReturnedMessageCallback;
 
     /**
      * @private
      * @constructor
-     *
-     * @param {string} [queue='']
-     * @param {string} [exchange='']
-     * @param {string} [routingKey='']
-     * @param {Any} [content='']
-     * @param {{}} [options={}]
-     * @param {boolean} [isToQueue=false]
      */
-    constructor(queue, exchange, routingKey, content, options, isToQueue) {
-        this._queue = queue || '';
-        this._exchange = exchange || '';
-        this._routingKey = routingKey || '';
-        this._content = Buffer.from(content || '');
-        this._options = options || {};
-        this._isToQueue = isToQueue || false;
-        this._onReturn = null;
+    private constructor(private _queue: string = '',
+                        private _exchange: string = '',
+                        private _routingKey = '',
+                        private _content: Buffer = Buffer.of(),
+                        private _options: Options.Publish = {},
+                        private _isToQueue = false) {
     }
 
     /**
      * Queue Name
      * @return {string}
      */
-    get queue() {
+    get queue(): string {
         return this._queue;
     }
 
@@ -35,7 +33,7 @@ class RabbitMQMessage {
      * Exchange Name
      * @return {string}
      */
-    get exchange() {
+    get exchange(): string {
         return this._exchange;
     }
 
@@ -43,7 +41,7 @@ class RabbitMQMessage {
      * Routing key
      * @return {string}
      */
-    get routingKey() {
+    get routingKey(): string {
         return this._routingKey;
     }
 
@@ -51,7 +49,7 @@ class RabbitMQMessage {
      * Message
      * @return {Buffer}
      */
-    get content() {
+    get content(): Buffer {
         return this._content;
     }
 
@@ -67,7 +65,7 @@ class RabbitMQMessage {
      *
      * @return {boolean}
      */
-    get isToQueue() {
+    get isToQueue(): boolean {
         return this._isToQueue;
     }
 
@@ -75,16 +73,15 @@ class RabbitMQMessage {
      *
      * @return {boolean}
      */
-    get isMandatory() {
-        return this._options.hasOwnProperty('mandatory')
-            && this._options.mandatory;
+    get isMandatory(): boolean {
+        return this._options?.mandatory || false;
     }
 
     /**
      *
      * @return {boolean}
      */
-    get hasReturnCallback() {
+    get hasReturnCallback(): boolean {
         return this.isMandatory && typeof this._onReturn === 'function';
     }
 
@@ -92,7 +89,7 @@ class RabbitMQMessage {
      *
      * @return {function}
      */
-    get onReturn() {
+    get onReturn(): OnReturnedMessageCallback | undefined {
         return this._onReturn;
     }
 
@@ -100,7 +97,7 @@ class RabbitMQMessage {
      * @private
      * @param {string} queueName
      */
-    set queue(queueName) {
+    set queue(queueName: string) {
         this._queue = queueName;
     }
 
@@ -108,7 +105,7 @@ class RabbitMQMessage {
      * @private
      * @param {string} exchangeName
      */
-    set exchange(exchangeName) {
+    set exchange(exchangeName: string) {
         this._exchange = exchangeName;
     }
 
@@ -116,7 +113,7 @@ class RabbitMQMessage {
      * @private
      * @param value
      */
-    set routingKey(value) {
+    set routingKey(value: string) {
         this._routingKey = value;
     }
 
@@ -124,7 +121,7 @@ class RabbitMQMessage {
      * Message to be sent
      * @param {Any} message
      */
-    set content(message) {
+    set content(message: any) {
         this._content = message;
     }
 
@@ -133,58 +130,61 @@ class RabbitMQMessage {
      * @private
      * @param {{}} value
      */
-    set options(value) {
+    set options(value: Options.Publish) {
         this._options = value;
     }
 
     /**
      * @private
-     * @param {boolean} value
+     * @param {boolean} toQueue
      */
-    set isToQueue(value) {
-        this._isToQueue = value;
+    set isToQueue(toQueue: boolean) {
+        this._isToQueue = toQueue;
     }
 
     /**
+     * Send this message to queue
      *
-     * @param {string} queue
+     * @param {string} queueName
      * @param {*} message
-     * @return {RabbitMQMessage}
+     * @return {Message}
      */
-    static toQueue(queue, message) {
-        return new RabbitMQMessage(queue, '', '', message, {}, true);
+    static toQueue(queueName: string, message: Buffer): Message {
+        return new Message(queueName, '', '', message, {}, true);
     }
 
     /**
+     * Send message to exchange with some routing key
      *
      * @param {string} exchange
      * @param {string} routingKey
-     * @param {Any} message
-     * @return {RabbitMQMessage}
+     * @param {Buffer} message
+     * @return {Message}
      */
-    static toExchange(exchange, routingKey, message) {
-        return new RabbitMQMessage('', exchange, routingKey, message);
+    static toExchange(exchange: string, routingKey: string, message: Buffer): Message {
+        return new Message('', exchange, routingKey, message);
     }
 
     /**
+     * Create RabbitMQMessage instance from returned message‘
      *
-     * @param {{content:Buffer,properties:{},fields:{}}} obj
-     * @return {RabbitMQMessage}
+     * @param {ClientMessage} message
+     * @return {Message}
      */
-    static fromReturnedMessage(obj) {
-        let instance = new RabbitMQMessage();
+    static fromReturnedMessage(message: ClientMessage): Message {
+        let instance = new Message();
 
-        instance.content = obj.content;
-        instance.options = obj.properties;
+        instance.content = message.content;
+        instance.options = message.properties;
 
-        if (obj.fields.exchange === '') {
+        if (message.fields.exchange === '') {
             instance.isToQueue = true;
-            instance.queue = obj.fields.routingKey;
+            instance.queue = message.fields.routingKey;
             return instance;
         }
 
-        instance.routingKey = obj.fields.routingKey;
-        instance.exchange = obj.fields.exchange;
+        instance.routingKey = message.fields.routingKey;
+        instance.exchange = message.fields.exchange;
 
         return instance;
     }
@@ -193,9 +193,9 @@ class RabbitMQMessage {
      * The message will be discarded from a queue once it’s been there longer
      * than the given number of milliseconds
      * @param {number} timeInMilliseconds
-     * @return {RabbitMQMessage}
+     * @return {Message}
      */
-    withExpirationTimeOf(timeInMilliseconds) {
+    withExpirationTimeOf(timeInMilliseconds: number): Message {
         this._options.expiration = String(timeInMilliseconds);
         return this;
     }
@@ -206,9 +206,9 @@ class RabbitMQMessage {
      * does not match.
      *
      * @param {string} userId
-     * @return {RabbitMQMessage}
+     * @return {Message}
      */
-    withUserID(userId) {
+    withUserID(userId: string): Message {
         this._options.userId = userId;
         return this;
     }
@@ -219,10 +219,18 @@ class RabbitMQMessage {
      * A string will be implicitly treated as an array containing just that string
      *
      * @param {string} cc
-     * @return {RabbitMQMessage}
+     * @return {Message}
      */
-    withCC(cc) {
-        this._options.cc = (this._options.cc || []).push(cc);
+    withCC(cc: string): Message {
+
+        if (!this._options.CC) {
+            this._options.CC = [];
+        }
+
+        if (Array.isArray(this._options.CC)) {
+            this._options.CC.push(cc);
+        }
+
         return this;
     }
 
@@ -230,16 +238,16 @@ class RabbitMQMessage {
      * A priority for the message
      *
      * @param {number} priority
-     * @return {RabbitMQMessage}
+     * @return {Message}
      */
-    withPriority(priority) {
+    withPriority(priority: number): Message {
         this._options.priority = priority;
         return this;
     }
 
     /**
      * The message will survive broker restarts provided it’s in a queue that also survives restarts.
-     * @return {RabbitMQMessage}
+     * @return {Message}
      */
     makeMessagePersistence() {
         this._options.persistent = true;
@@ -249,13 +257,13 @@ class RabbitMQMessage {
     /**
      * The message will be returned if it is not routed to a queue.
      * @param {function} [onError=null]
-     * @return {RabbitMQMessage}
+     * @return {Message}
      */
-    makeMessageMandatory(onError) {
+    makeMessageMandatory(onError: OnReturnedMessageCallback): Message {
         this._options.mandatory = true;
 
-        if(onError) {
-           this._onReturn = onError;
+        if (onError) {
+            this._onReturn = onError;
         }
 
         return this;
@@ -265,9 +273,9 @@ class RabbitMQMessage {
      * MIME type for the message content
      *
      * @param {string} contentType
-     * @return {RabbitMQMessage}
+     * @return {Message}
      */
-    withContentType(contentType) {
+    withContentType(contentType: string): Message {
         this._options.contentType = contentType;
         return this;
     }
@@ -275,29 +283,29 @@ class RabbitMQMessage {
     /**
      * Protobuf MIME type for the message content
      *
-     * @return {RabbitMQMessage}
+     * @return {Message}
      */
-    protobufMediaType() {
+    protobufMediaType(): Message {
         return this.withContentType('application/protobuf');
     }
 
     /**
      * JSON MIME type for the message content
      *
-     * @return {RabbitMQMessage}
+     * @return {Message}
      */
-    jsonMediaType() {
+    jsonMediaType(): Message {
         return this.withContentType('application/json');
     }
 
     /**
      * MIME encoding for the message content
      *
-     * @param {string} encoding
-     * @return {RabbitMQMessage}
+     * @param {string} contentEncoding
+     * @return {Message}
      */
-    withContentEnconding(encoding) {
-        this._options.encoding = encoding;
+    withContentEncoding(contentEncoding: string): Message {
+        this._options.contentEncoding = contentEncoding;
         return this;
     }
 
@@ -306,27 +314,31 @@ class RabbitMQMessage {
      *
      * @param {string} key
      * @param {string} value
-     * @return {RabbitMQMessage}
+     * @return {Message}
      */
-    withHeader(key, value) {
+    withHeader(key: string, value: string): Message {
 
-        this._options.headers = Object.assign((this._options.headers || {}), {[key]:value});
+        if (!this._options.headers) {
+            this._options.headers = {};
+        }
+
+        this._options.headers[key] = value;
         return this;
     }
 
     /**
      *
      * @param {string} correlationId
-     * @return {RabbitMQMessage}
+     * @return {Message}
      */
-    withCorrelationId(correlationId) {
+    withCorrelationId(correlationId: string): Message {
         this._options.correlationId = correlationId;
         return this;
     }
 
     /**
      *
-     * @return {RabbitMQMessage}
+     * @return {Message}
      */
     withUUIDCorrelatedId() {
         return this.withCorrelationId(uuid());
@@ -336,9 +348,9 @@ class RabbitMQMessage {
      * Often used to name a queue to which the receiving application must send replies, in an RPC scenario
      *
      * @param {string} replyTo
-     * @return {RabbitMQMessage}
+     * @return {Message}
      */
-    withReplyTo(replyTo) {
+    withReplyTo(replyTo: string): Message {
         this._options.replyTo = replyTo;
         return this;
     }
@@ -347,9 +359,9 @@ class RabbitMQMessage {
      * Arbitrary application-specific identifier for the message
      *
      * @param {string} messageId
-     * @return {RabbitMQMessage}
+     * @return {Message}
      */
-    withMessageId(messageId) {
+    withMessageId(messageId: string): Message {
         this._options.messageId = messageId;
         return this;
     }
@@ -357,9 +369,9 @@ class RabbitMQMessage {
     /**
      * A timestamp for the message
      *
-     * @return {RabbitMQMessage}
+     * @return {Message}
      */
-    withTimestamp() {
+    withTimestamp(): Message {
         this._options.timestamp = new Date().getTime();
         return this;
     }
@@ -368,9 +380,9 @@ class RabbitMQMessage {
      * An arbitrary application-specific type for the message
      *
      * @param {string} type
-     * @return {RabbitMQMessage}
+     * @return {Message}
      */
-    withType(type) {
+    withType(type: string): Message {
         this._options.type = type;
         return this;
     }
@@ -379,13 +391,11 @@ class RabbitMQMessage {
      * An arbitrary identifier for the originating application.
      *
      * @param {string} appId
-     * @return {RabbitMQMessage}
+     * @return {Message}
      */
-    withAppId(appId) {
+    withAppId(appId: string) {
         this._options.appId = appId;
         return this;
     }
 
 }
-
-module.exports = {RabbitMQMessage};
