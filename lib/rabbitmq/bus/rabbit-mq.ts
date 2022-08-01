@@ -72,11 +72,8 @@ export class RabbitMQ implements Bus {
     async subscribe(subscription: Subscription): Promise<boolean> {
 
         if (!(subscription instanceof SubscriptionImpl)) {
-            throw new TypeError("");
+            throw new TypeError("Subscription must be created from the library subscription builders");
         }
-
-        if (!this._subscriptions.includes(subscription))
-            this._subscriptions.push(subscription);
 
         if (!this.isConnected) {
             this.logger.debug('Connection is not available, postpone subscription');
@@ -99,17 +96,13 @@ export class RabbitMQ implements Bus {
                     }, subscription.consumerOptions);
 
                 subscription.onSubscription();
-
                 this.logger.debug(`Queue ${subscription.queue} with consumer tag of: ${consumerReply?.consumerTag}`);
-                return true;
             } catch (e) {
                 this.logger.debug(`Could not create queue: ${subscription.queue}`, e);
-                this._subscriptions.splice(this._subscriptions.indexOf(subscription), 1);
                 subscription.onSubscriptionError(e);
                 return false;
             }
         } else {
-
             if (!subscription.exchange
                 || !subscription.pattern) {
                 throw new Error("Subscription to exchange must have the name,type and pattern assigned");
@@ -127,6 +120,8 @@ export class RabbitMQ implements Bus {
                         subscription.exchangeOptions);
                 } catch (e) {
                     this.logger.debug(`Exchange not exists: ${subscription.exchange}`, e);
+                    this._subscriptions.splice(this._subscriptions.indexOf(subscription), 1);
+                    subscription.onSubscriptionError(e);
                     return false;
                 }
             } else {
@@ -134,6 +129,7 @@ export class RabbitMQ implements Bus {
                     await this._channel?.checkExchange(subscription.exchange);
                 } catch (e) {
                     this.logger.debug(`Exchange not exists: ${subscription.exchange}`, e);
+                    subscription.onSubscriptionError(e);
                     return false;
                 }
             }
@@ -151,14 +147,17 @@ export class RabbitMQ implements Bus {
                 }, subscription.consumerOptions);
 
                 subscription.onSubscription();
-                return true;
             } catch (e) {
                 this.logger.debug(`Could not bind to exchange: ${subscription.exchange}`, e);
-                this._subscriptions.splice(this._subscriptions.indexOf(subscription), 1);
                 subscription.onSubscriptionError(e);
                 return false;
             }
         }
+
+        if (!this._subscriptions.includes(subscription))
+            this._subscriptions.push(subscription);
+
+        return true;
     }
 
 
@@ -168,16 +167,13 @@ export class RabbitMQ implements Bus {
     async unsubscribe(subscription: Subscription): Promise<boolean> {
 
         if (!(subscription instanceof SubscriptionImpl)) {
-            throw new TypeError("");
+            throw new TypeError("Subscription must be created from the library subscription builders");
         }
-
-
-        if (!this._subscriptions.includes(subscription)) {
-            throw new Error('Subscription not found');
+        
+        if (this._subscriptions.includes(subscription)) {
+            const idx = this._subscriptions.indexOf(subscription);
+            this._subscriptions.splice(idx, 1);
         }
-
-        const idx = this._subscriptions.indexOf(subscription);
-        this._subscriptions.splice(idx, 1);
 
         if (this.isConnected) {
             if (subscription.isOnlyQueueSubscription) {
