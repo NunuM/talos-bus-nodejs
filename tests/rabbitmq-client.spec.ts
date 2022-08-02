@@ -1,6 +1,6 @@
 import {ClientConfig, ExchangeSubscriptionBuilder, Message, QueueSubscriptionBuilder, RabbitMQ} from "../lib";
 
-const CONNECTION_STR = 'amqp://guest:guest@localhost:5672/';
+const CONNECTION_STR = 'amqp://guest:guest@localhost:5672';
 
 describe('testing client', () => {
 
@@ -17,7 +17,7 @@ describe('testing client', () => {
         client.publish(Message.toQueue('pluto', Buffer.from('ttestt')));
         expect(client['_messagesBuffer'].size()).toBe(1);
         await client.subscribe(QueueSubscriptionBuilder.newBuilder('pluto').build());
-        expect(client['_subscriptions'].length).toBe(1);
+        expect(client['_subscriptions'].size).toBe(1);
 
         await client.disconnect();
 

@@ -92,15 +92,15 @@ export class RabbitMQ implements Bus {
                             if (this._configs.useConfirmChannel) {
                                 this._channel?.ack(msg);
                             }
-                            subscription.onMessage(msg);
+                            subscription.emit('message', msg);
                         }
                     }, subscription.consumerOptions);
 
-                subscription.onSubscription();
+                subscription.emit("subscribed");
                 this.logger.debug(`Queue ${subscription.queue} with consumer tag of: ${consumerReply?.consumerTag}`);
             } catch (e) {
                 this.logger.debug(`Could not create queue: ${subscription.queue}`, e);
-                subscription.onSubscriptionError(e);
+                subscription.emit("subscriptionError", e);
                 return false;
             }
         } else {
@@ -121,7 +121,7 @@ export class RabbitMQ implements Bus {
                         subscription.exchangeOptions);
                 } catch (e) {
                     this.logger.debug(`Exchange not exists: ${subscription.exchange}`, e);
-                    subscription.onSubscriptionError(e);
+                    subscription.emit("subscriptionError", e);
                     return false;
                 }
             } else {
@@ -129,7 +129,7 @@ export class RabbitMQ implements Bus {
                     await this._channel?.checkExchange(subscription.exchange);
                 } catch (e) {
                     this.logger.debug(`Exchange not exists: ${subscription.exchange}`, e);
-                    subscription.onSubscriptionError(e);
+                    subscription.emit("subscriptionError", e);
                     return false;
                 }
             }
@@ -142,14 +142,14 @@ export class RabbitMQ implements Bus {
                         if (this._configs.useConfirmChannel) {
                             this._channel?.ack(msg);
                         }
-                        subscription.onMessage(msg);
+                        subscription.emit("message", msg);
                     }
                 }, subscription.consumerOptions);
 
-                subscription.onSubscription();
+                subscription.emit("subscribed");
             } catch (e) {
                 this.logger.debug(`Could not bind to exchange: ${subscription.exchange}`, e);
-                subscription.onSubscriptionError(e);
+                subscription.emit("subscriptionError", e);
                 return false;
             }
         }
@@ -322,7 +322,10 @@ export class RabbitMQ implements Bus {
         }
     }
 
-
+    /**
+     * Create channel
+     * @private
+     */
     private async createChannel(): Promise<boolean> {
 
         if (this._configs.useConfirmChannel) {
@@ -475,7 +478,7 @@ export class RabbitMQ implements Bus {
      * @private
      * @return {Promise<boolean>}
      */
-    async reconnect() {
+    private async reconnect() {
 
         this.logger.debug('Reconnecting to bus');
 
@@ -537,5 +540,21 @@ export class RabbitMQ implements Bus {
             this.publish(message);
         }
         return true;
+    }
+
+    /**
+     * Object  state
+     */
+    toString(): string {
+        const buffer: string[] = [
+            RabbitMQ.name,
+            `state: ${this._state}`,
+            `number of subscriptions: ${this._subscriptions.size}`,
+            `number of callbacks: ${this._onErrorCallbacks.size}`,
+            `reconnection of attempts: ${this._onErrorCallbacks.size}`,
+            `number of buffered messages: ${this._messagesBuffer.size()}`,
+        ];
+
+        return buffer.join(", ");
     }
 }

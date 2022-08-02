@@ -1,7 +1,9 @@
+[![NPM version][npm-image]][npm-url]
 
-This is a wrapper for [amqplib](http://www.squaremobius.net/amqp.node/channel_api.html#channel_unbindQueue) used by [Talos edge platform](https://talos.sh)
+RabbitMQ client using [amqplib](http://www.squaremobius.net/amqp.node/channel_api.html#channel_unbindQueue)
 
 ## Features
+
 * Well-defined API
 * Implemented Bus interface for RabbitMQ
 * Automatic re-connection
@@ -16,79 +18,22 @@ This is a wrapper for [amqplib](http://www.squaremobius.net/amqp.node/channel_ap
 npm install talos-bus
 ```
 
+## Example
 
-## Usage
+```typescript
+const client = new RabbitMQ(new ClientConfig(
+    'amqp://guest:guest@localhost:5672'
+));
 
-### Async Version
+const isConnected: boolean = await client.connect();
 
-```js
-const tbus = require('talos-bus');
+const subscription: Subscription = QueueSubscriptionBuilder.newBuilder("logs").isAutoDelete(true).build();
 
-async function fn() {
-  
-    const options = {
-        useConfirmChannel: false,
-        reconnectionBackoff: 500, // After losing connection reconnect after X ms
-        client: {
-            timeout: 6000 // socket timeout
-        },
-        qos: {
-            prefetch: 50
-        }
-    };
-    /**
-    * 
-    * @type {Bus}
-    */
-    const bus = new tbus.RabbitMQBus('amqp://guest:guest@localhost:5672', options , console);
-    
-    try {
-        await bus.connect();   
-        
-        //subscribe to test
-        bus.subscribe(tbus.RabbitMQMessageHandler.forQueue('test')
-                          .makeQueueExclusive()
-                          .withMessageHandler(console.log)
-        );
-        
-        //send message
-        bus.publish(tbus.RabbitMQMessage.toQueue('test', 'test').withContentType('text/plain').makeMessagePersistence());
-        
-        // More options are available either on RabbitMQMessage and on RabbitMQMessageHandler, this a a simple example
-        
-    } catch (e) {
-       console.error('Error', e);
-       
-    }
-}
-```
-
-### Sequential declaration
-
-```js
-const tbus = require('talos-bus');
-
-const bus = new tbus.RabbitMQBus('amqp://guest:guest@localhost:5672');
-
-// 3 - This will run after since is a promise
-// on connection the subscription will be restored and then, the message is publish
-bus.connect().finally(); 
-
-// 1 - Queue message in memory
-bus.publish(tbus.RabbitMQMessage.toQueue('test', JSON.stringify({o: 1}))
-    .jsonMediaType()
-    .makeMessagePersistence());
-
-
-const c = tbus.RabbitMQMessageHandler.forQueue('test')
-    .makeQueueAutoDelete()
-    .makeQueueExclusive()
-    .withMessageHandler((msg) => {
-        console.log(msg.content.toString());
-        bus.unsubscribe(c);
-    });
-
-// 2 - Preserve subscription
-bus.subscribe(c);
+await client.subscribe(subscription);
+subscription.on("message", console.log);
+const sent: boolean = client.publish(Message.toQueue('logs', Buffer.from('message')));
 
 ```
+
+[npm-url]: https://www.npmjs.com/package/talos-bus
+[npm-image]: https://img.shields.io/npm/v/talos-bus.svg

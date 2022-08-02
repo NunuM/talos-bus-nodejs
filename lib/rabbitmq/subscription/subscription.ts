@@ -45,7 +45,6 @@ export interface Subscription {
 
 export class SubscriptionImpl extends EventEmitter implements Subscription {
 
-
     constructor(private readonly _options: SubscriptionOptions,
                 private readonly _queueOptions: Options.AssertQueue = {},
                 private readonly _deleteQueueOptions: Options.DeleteQueue = {},
@@ -97,40 +96,5 @@ export class SubscriptionImpl extends EventEmitter implements Subscription {
 
     get exchangeType(): string | undefined {
         return this._options.exchangeType;
-    }
-
-    /**
-     * @protected
-     * @param {ConsumeMessage} msg
-     */
-    onMessage(msg: ConsumeMessage) {
-        /**
-         * @event Subscription#Events.Message
-         * @type {ConsumeMessage}
-         */
-        this.emit('message', msg);
-    }
-
-    /**
-     * @protected
-     * @param {Error} error
-     */
-    onError(error: Error) {
-        this.emit('error', error);
-    }
-
-    /**
-     * @protected
-     */
-    onSubscription() {
-        this.emit('subscribed');
-    }
-
-    /**
-     * @protected
-     * @param {Error} error
-     */
-    onSubscriptionError(error: Error | any) {
-        this.emit('subscriptionError', error);
     }
 }
