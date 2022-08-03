@@ -1,8 +1,8 @@
 {
   "name": "talos-bus",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Talos Bus interface",
-  "main": "dist/index.ts",
+  "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "run": "npx tsc",
@@ -31,6 +31,11 @@
     "amqplib": "^0.10.1",
     "uuid": "^8.3.2"
   },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
   "devDependencies": {
     "@types/amqplib": "^0.8.2",
     "@types/jest": "^28.1.4",
