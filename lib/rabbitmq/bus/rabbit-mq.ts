@@ -233,36 +233,30 @@ export class RabbitMQ implements Bus {
             setTimeout(() => {
                 this._onErrorCallbacks.delete(key);
             }, 1000 * 10);
-
         }
 
-        try {
-            if (message.isToQueue) {
 
-                this._channel?.sendToQueue(message.queue, message.content, message.options);
+        if (message.isToQueue) {
 
-                //@ts-ignore
-                return this._channel?.sendToQueue(message.queue, message.content, message.options, (error) => {
-                    if (error) {
-                        this.logger.warn('Message will be re-queued by not receiving ack', error);
-                        this._messagesBuffer.write(message);
-                    }
-                }) || false;
+            this._channel?.sendToQueue(message.queue, message.content, message.options);
 
-            } else {
-                //@ts-ignore
-                return this._channel?.publish(message.exchange, message.routingKey, message.content, message.options, (error) => {
-                    if (error) {
-                        this.logger.warn('Message will be re-queued by not receiving ack', error);
-                        this._messagesBuffer.write(message);
-                    }
-                }) || false;
-            }
-        } catch (e) {
-            this.logger.debug('The channel is closed, this bus should be reported', e);
+            //@ts-ignore
+            return this._channel?.sendToQueue(message.queue, message.content, message.options, (error) => {
+                if (error) {
+                    this.logger.warn('Message will be re-queued by not receiving ack', error);
+                    this._messagesBuffer.write(message);
+                }
+            }) || false;
+
+        } else {
+            //@ts-ignore
+            return this._channel?.publish(message.exchange, message.routingKey, message.content, message.options, (error) => {
+                if (error) {
+                    this.logger.warn('Message will be re-queued by not receiving ack', error);
+                    this._messagesBuffer.write(message);
+                }
+            }) || false;
         }
-
-        return false;
     }
 
 

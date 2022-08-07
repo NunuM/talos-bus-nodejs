@@ -28,6 +28,9 @@ export interface Bus {
      *
      * @abstract
      * @param {Message} message
+     * @throws {TypeError} if some argument has wrong data type
+     * @throws {Error} for some unknown reason
+     * @return true if message was publish
      */
     publish(message: Message): boolean;
 

@@ -1,6 +1,6 @@
 import {ClientConfig, ExchangeSubscriptionBuilder, Message, QueueSubscriptionBuilder, RabbitMQ} from "../lib";
 
-const CONNECTION_STR = 'amqp://guest:guest@localhost:5672';
+const CONNECTION_STR = 'amqp://mazikeen:NunoTiago12_34@aella/';
 
 describe('testing client', () => {
 
