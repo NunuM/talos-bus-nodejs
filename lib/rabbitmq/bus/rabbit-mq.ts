@@ -293,9 +293,10 @@ export class RabbitMQ implements Bus {
 
             if (this._state !== ConnectionState.Reconnecting) {
                 try {
+                    await this.reEstablishSubscriptions();
                     await this.flushQueuedMessages();
                 } catch (e) {
-
+                    this.logger.debug("Error re-subscribing", e);
                 }
             }
 

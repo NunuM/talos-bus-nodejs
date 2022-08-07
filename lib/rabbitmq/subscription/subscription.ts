@@ -1,4 +1,4 @@
-import {ConsumeMessage, Options} from "amqplib/properties";
+import {Options} from "amqplib/properties";
 import {EventEmitter} from "events";
 import amqplib from "amqplib";
 
