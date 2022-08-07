@@ -1,8 +1,5 @@
 /** node modules */
 import util from 'util';
-
-const backoff = util.promisify(setTimeout);
-
 /** package imports */
 import {v4 as uuid} from 'uuid';
 import amqplib, {Channel, Connection, Replies} from 'amqplib';
@@ -13,6 +10,8 @@ import {Message, OnReturnedMessageCallback} from '../message/message';
 import {Subscription, SubscriptionImpl} from '../subscription/subscription';
 import {CircularBuffer} from "../../utils/circular-buffer";
 import {ClientConfig} from './client-config';
+
+const backoff = util.promisify(setTimeout);
 
 enum ConnectionState {
     NotConnected,
@@ -291,7 +290,9 @@ export class RabbitMQ implements Bus {
 
             await this.createChannel();
 
-            if (this._state !== ConnectionState.Reconnecting) {
+            const oldStats = this._state;
+            this._state = ConnectionState.Connected;
+            if (oldStats !== ConnectionState.Reconnecting) {
                 try {
                     await this.reEstablishSubscriptions();
                     await this.flushQueuedMessages();
@@ -300,7 +301,6 @@ export class RabbitMQ implements Bus {
                 }
             }
 
-            this._state = ConnectionState.Connected;
             this.logger.info("Connected to RabbitMQ server");
 
             return true;
