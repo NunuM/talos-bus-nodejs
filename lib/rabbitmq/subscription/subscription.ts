@@ -15,7 +15,7 @@ export interface SubscriptionOptions {
     exchange?: string,
     pattern?: string
     createExchange?: boolean,
-    exchangeType?: string
+    exchangeType?: ExchangeType
 }
 
 export interface SubscriptionEvent {
@@ -94,7 +94,11 @@ export class SubscriptionImpl extends EventEmitter implements Subscription {
         return this._options.createExchange || false;
     }
 
-    get exchangeType(): string | undefined {
+    get exchangeType(): ExchangeType | undefined {
         return this._options.exchangeType;
+    }
+
+    toString(): string {
+        return JSON.stringify(this);
     }
 }

@@ -83,7 +83,10 @@ export class RabbitMQ implements Bus {
         if (subscription.isOnlyQueueSubscription) {
 
             try {
-                await this._channel?.assertQueue(subscription.queue, subscription.queueOptions);
+                const queueReply: Replies.AssertQueue | undefined = await this._channel?.assertQueue(subscription.queue, subscription.queueOptions);
+                if (typeof subscription.queue === 'string' && subscription.queue.length === 0 && queueReply) {
+                    subscription['_options']['queue'] = queueReply.queue;
+                }
                 const consumerReply: Replies.Consume | undefined = await this._channel?.consume(
                     subscription.queue,
                     (msg) => {
@@ -134,7 +137,10 @@ export class RabbitMQ implements Bus {
             }
 
             try {
-                await this._channel?.assertQueue(subscription.queue, subscription.queueOptions);
+                const queueReply: Replies.AssertQueue | undefined = await this._channel?.assertQueue(subscription.queue, subscription.queueOptions);
+                if (typeof subscription.queue === 'string' && subscription.queue.length === 0 && queueReply) {
+                    subscription['_options']['queue'] = queueReply.queue;
+                }
                 await this._channel?.bindQueue(subscription.queue, subscription.exchange, subscription.pattern);
                 await this._channel?.consume(subscription.queue, (msg) => {
                     if (msg) {
@@ -185,7 +191,7 @@ export class RabbitMQ implements Bus {
                 }
             } else {
                 if (!subscription.exchange
-                    || !subscription.exchangeType
+                    || !subscription.queue
                     || !subscription.pattern) {
                     throw new Error("UnSubscription to exchange must have the name,type and pattern assigned");
                 }
