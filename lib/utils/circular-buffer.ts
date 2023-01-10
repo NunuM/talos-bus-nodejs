@@ -58,7 +58,17 @@ export class CircularBuffer<T> implements Iterable<T> {
     }
 
     [Symbol.iterator](): Iterator<T> {
-        return new CircularBufferIterator(this);
+        return new CircularBufferIterator(this.clone());
+    }
+
+    private clone(): CircularBuffer<T> {
+        const clone = new CircularBuffer<T>(this._capacity);
+        clone._readIndex = this._readIndex;
+        clone._writeIndex = this._writeIndex;
+        clone._size = this._size;
+        clone._buffer = [...this._buffer];
+
+        return clone;
     }
 }
 

@@ -19,7 +19,8 @@ enum ConnectionState {
     Connected,
     Blocked,
     Disconnecting,
-    Disconnected
+    Disconnected,
+    ConnectedWithNoChannel
 }
 
 
@@ -59,6 +60,10 @@ export class RabbitMQ implements Bus {
 
     get isClientBlocked(): boolean {
         return this._state === ConnectionState.Blocked;
+    }
+
+    get isChannelClosed(): boolean {
+        return this._state === ConnectionState.ConnectedWithNoChannel;
     }
 
     get isToDisconnect(): boolean {
@@ -222,7 +227,8 @@ export class RabbitMQ implements Bus {
             return false;
         }
 
-        if (!this.isConnected || this.isClientBlocked) {
+        if (!this.isConnected || this.isClientBlocked || this.isChannelClosed) {
+            this.logger.debug("Queuing message due connectivity error:", this._state);
             this.messagesBuffer.write(message);
             return false;
         }
@@ -429,28 +435,39 @@ export class RabbitMQ implements Bus {
          * while buffering messages in memory.
          */
         this._channel?.on('error', (error) => {
-            this._state = ConnectionState.NotConnected;
+            this._state = ConnectionState.ConnectedWithNoChannel;
 
             this.logger.debug('Channel error', error);
 
             process.nextTick(() => {
-                this.createChannel()
-                    .catch((e) => {
-                        this.logger.debug("Unable to create channel", e);
-                        return this.stop();
-                    })
-                    .then((created) => {
-                        if (created) {
-                            this.logger.debug("Re-created channel");
-                        } else {
-                            if (!this.isToDisconnect) {
-                                return this.connect();
-                            }
-                        }
-                    })
-                    .catch((e) => {
-                        this.logger.debug("Unable to re-connect", e);
-                    });
+                backoff(30 * 1000).then(() => {
+                    return this.createChannel();
+                }).then((created) => {
+                    this.logger.debug("Channel created:", created);
+                    if (created) {
+                        this._state = ConnectionState.Connected;
+                        return true;
+                    } else {
+                        return Promise.reject("Channel not created");
+                    }
+                }).then((restored) => {
+                    if (restored) {
+                        this.logger.debug("Re-created channel");
+                        return this.reEstablishSubscriptions()
+                            .then(() => {
+                                return this.flushQueuedMessages();
+                            });
+                    } else {
+                        return Promise.reject("Channel not created");
+                    }
+                }).catch((e) => {
+                    this.logger.debug("Unable to re-connect channel", e);
+                    if (!this.isToDisconnect) {
+                        return this.disconnect().then(() => this.connect());
+                    } else {
+                        return Promise.resolve(true);
+                    }
+                });
             });
         });
 
@@ -538,7 +555,9 @@ export class RabbitMQ implements Bus {
     private async flushQueuedMessages() {
         for (const message of this.messagesBuffer) {
             await backoff(50);
-            this.publish(message);
+            if(!this.publish(message)) {
+                return false;
+            }
         }
         return true;
     }
