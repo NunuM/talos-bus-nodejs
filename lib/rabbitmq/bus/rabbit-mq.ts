@@ -249,9 +249,6 @@ export class RabbitMQ implements Bus {
 
 
         if (message.isToQueue) {
-
-            this._channel?.sendToQueue(message.queue, message.content, message.options);
-
             //@ts-ignore
             return this._channel?.sendToQueue(message.queue, message.content, message.options, (error) => {
                 if (error) {
